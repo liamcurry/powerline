@@ -1,36 +1,37 @@
 {
-  "segments": {
-    "left": [
-      {
-        "name": "user_name"
-      },
-      {
-        "name": "external_ip"
-      },
-      {
-        "name": "uptime"
-      }
-    ],
-    "right": [
-      {
-        "name": "system_load"
-      },
-      {
-        "name": "forecast",
-        "args": {"zipcode": "21122", "units": "c"}
-      },
-      {
-        "name": "date",
-        "args": {"format": "%a"}
-      },
-      {
-        "name": "date"
-      },
-      {
-        "name": "date",
-        "args": {"format": "%H:%M"}
-      }
-    ]
-  }
-
+	"segments": {
+		"left": [
+			{
+				"module": "powerline.ext.terminal.segments",
+				"name": "user"
+			},
+			{
+				"name": "external_ip",
+				"before": "ⓦ  "
+			},
+			{
+				"name": "uptime",
+				"before": "⇑  "
+			}
+		],
+		"right": [
+			{
+				"name": "system_load"
+			},
+			{
+				"name": "forecast"
+			},
+			{
+				"name": "date",
+				"args": {"format": "%a"}
+			},
+			{
+				"name": "date"
+			},
+			{
+				"name": "date",
+				"args": {"format": "%H:%M"}
+			}
+		]
+	}
 }

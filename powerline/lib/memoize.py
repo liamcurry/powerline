@@ -1,48 +1,50 @@
+# -*- coding: utf-8 -*-
+
 import cPickle as pickle
+import functools
 import os
+import tempfile
 import time
 
 
 class memoize(object):
-    '''Memoization decorator with timout.
+	'''Memoization decorator with timeout.'''
+	_cache = {}
 
-    http://code.activestate.com/recipes/325905-memoize-decorator-with-timeout/
-    '''
+	def __init__(self, timeout, additional_key=None, persistent=False, persistent_file=None):
+		self.timeout = timeout
+		self.additional_key = additional_key
+		self.persistent = persistent
+		self.persistent_file = persistent_file or os.path.join(tempfile.gettempdir(), 'powerline-cache')
 
-    def __init__(self, timeout, additional_key=None, filename=None):
-        self.timeout = timeout
-        self.additional_key = additional_key
-        self.filename = filename
-        self.caches = {}
-
-    def __call__(self, f):
-
-        def func(*args, **kwargs):
-
-            if self.filename and os.path.exists(self.filename):
-                with open(self.filename, 'r+b') as fileobj:
-                    try:
-                        self.caches = pickle.load(fileobj)
-                    except EOFError:
-                        pass
-
-            key = (args, tuple(kwargs.items()))
-
-            if self.additional_key:
-                key += (self.additional_key(), )
-
-            key = str(key)
-            result = self.caches.get(key, None)
-
-            if result is None or time.time() - result[1] > self.timeout:
-                result = self.caches[key] = f(*args, **kwargs), time.time()
-
-            if self.filename:
-                with open(self.filename, 'wb') as fileobj:
-                    pickle.dump(self.caches, fileobj)
-                    fileobj.close()
-
-            return result[0]
-
-        func.func_name = f.func_name
-        return func
+	def __call__(self, func):
+		@functools.wraps(func)
+		def decorated_function(*args, **kwargs):
+			if self.additional_key:
+				key = (func.__name__, args, tuple(kwargs.items()), self.additional_key())
+			else:
+				key = (func.__name__, args, tuple(kwargs.items()))
+			if self.persistent:
+				try:
+					with open(self.persistent_file, 'rb') as fileobj:
+						self._cache = pickle.load(fileobj)
+				except (IOError, EOFError):
+					pass
+			cached = self._cache.get(key, None)
+			if cached is None or time.time() - cached['time'] > self.timeout:
+				cached = self._cache[key] = {
+					'result': func(*args, **kwargs),
+					'time': time.time(),
+					}
+				if self.persistent:
+					try:
+						with open(self.persistent_file, 'wb') as fileobj:
+							pickle.dump(self._cache, fileobj)
+					except IOError:
+						# Unable to write to file
+						pass
+					except TypeError:
+						# Unable to pickle function result
+						pass
+			return cached['result']
+		return decorated_function
